@@ -56,7 +56,7 @@ if($_SERVER['REQUEST_METHOD'] === 'POST'){
     // 设置参数并执行
     $poster = htmlentities($_POST["poster"]);
     $postText = htmlentities($_POST["postText"]);
-    $code = GetRandStr(8);
+    $code = GetRandStr(4);
     $expire_flag = $_POST["expiry"];
     if (!preg_match('/^[dmwfy]$/', $expire_flag))
 		$expire_flag='m';
@@ -97,6 +97,15 @@ else{
             ?>
         <div class="p-strip--light">
             <div class="row">
+                <h2>Goto paste</h2>
+                <div class="row">
+                    <div class="col-4">
+                        <label for="code_goto">Code:</label> <input type="text" name="code_goto" value="" required id="code_goto" maxlength="10" />
+                        <input class="p-button--positive" type="submit" value="Goto" onclick="location.href='/'+document.getElementById('code_goto').value">
+                    </div>
+                </div>
+            </div>
+            <div class="row">
                 <h2>New paste</h2>
                 <form action="/" method="POST" id="pasteform" name="pasteform" class="p-form">
                     <div class="row">
@@ -129,35 +138,6 @@ else{
             </div>
         </div>
         <hr/>
-                <!--<form name="editor" method="post" action="/">
-                    <input type="hidden" name="parent_pid" value=""/>
-                    <label for="postText">在下面输入要保存的内容：</label>
-                    <textarea id="postText" class="codeedit" name="postText" cols="80" rows="10" onkeydown="return onTextareaKey(this,event)"></textarea>
-                    <div id="namebox">
-                        <label for="poster">您的名字：</label><br/>
-                        <input type="text" maxlength="24" size="24" id="poster" name="poster" value="" />
-                        <input type="submit" name="paste" value="Send"/>
-                    </div>
-                    <div id="expirybox">
-                        <div id="expiryradios">
-                            <label>保存时间?</label><br/>
-                            
-                            <input type="radio" id="expiry_day" name="expiry" value="d"  />
-                            <label id="expiry_day_label" for="expiry_day">a day</label>
-                            
-                            <input type="radio" id="expiry_month" name="expiry" value="m"  />
-                            <label id="expiry_month_label" for="expiry_month">a month</label>
-                            
-                            <input type="radio" id="expiry_forever" name="expiry" value="f"  />
-                            <label id="expiry_forever_label" for="expiry_forever">forever</label>
-                        </div>
-                        <div id="expiryinfo"></div>
-                    </div>
-                    <div id="email">
-                        <input type="text" size="8" name="email" value="" />
-                    </div>
-                    <div id="end"></div>
-                </form>-->
             <?php
                 } else {
                     $stmt = $conn->prepare("SELECT poster, postText, date_format(DATE_ADD(posted, INTERVAL 8 HOUR), '%Y-%m-%d %H:%i:%s') as posted, date_format(DATE_ADD(expires, INTERVAL 8 HOUR), '%Y-%m-%d %H:%i:%s') as expires FROM pastebin WHERE code = ? and (expires >= now() or expiry_flag = 'f')");
@@ -180,17 +160,76 @@ else{
                 </div>
                 <div class="col-4 u-align--right">
                     <a class="p-button--neutral" href="/">New</a>
-                    <button class="p-button--positive js-copy-button">Copy</button>
+                    <a class="p-button--positive js-copy-button-1">Copy Text</a>
+                    <a class="p-button--positive js-copy-button-2">Copy Code</a>
                 </div>
                 <div class="paste" style="font-size: 14px;">
                     <div class="highlight">
-                        <pre> <?php echo $row["postText"] ?></pre>
+                        <pre><?php echo $row["postText"] ?></pre>
                     </div>
+                    <textarea id="hidden-content" class="u-hide"><?php echo $row["postText"] ?></textarea>
                 </div>
             </div>
             <div class="row">
-                <h4 class="p-heading--three">Link: <a href="/<?php echo $_GET["id"] ?>">https://pastebin.epis2048.net/<?php echo $_GET["id"] ?></a></h4>
+                <h4>Link: </br><a href="/<?php echo $_GET["id"] ?>">https://pastebin.epis2048.net/<?php echo $_GET["id"] ?></a></h4>
             </div>
+            <div class="row">
+                <h4>Code: </br><?php echo $_GET["id"] ?></h4>
+                <textarea id="hidden-code" class="u-hide"><?php echo $_GET["id"] ?></textarea>
+            </div>
+            <script>
+                var copyToClipboard = function(str) {
+                  var el = document.createElement('textarea'); // Create a <textarea> element
+                  el.value = str; // Set its value to the string that you want copied
+                  el.setAttribute('readonly', ''); // Make it readonly to be tamper-proof
+                  el.style.position = 'absolute';
+                  el.style.left = '-9999px'; // Move outside the screen to make it invisible
+                  document.body.appendChild(el); // Append the <textarea> element to the HTML document
+                  var selected =
+                    document.getSelection().rangeCount > 0 // Check if there is any content selected previously
+                      ? document.getSelection().getRangeAt(0) // Store selection if found
+                      : false; // Mark as false to know no selection existed before
+                  el.select(); // Select the <textarea> content
+                  document.execCommand('copy'); // Copy - only works as a result of a user action (e.g. click events)
+                  document.body.removeChild(el); // Remove the <textarea> element
+                  if (selected) {
+                    // If a selection existed before copying
+                    document.getSelection().removeAllRanges(); // Unselect everything on the HTML document
+                    document.getSelection().addRange(selected); // Restore the original selection
+                  }
+                };
+                
+                var content = document.getElementById('hidden-content').value;
+                var codeCopyableActions = document.querySelectorAll(
+                  '.js-copy-button-1'
+                );
+                
+                for (var i = 0; i < codeCopyableActions.length; i  ++) {
+                  codeCopyableActions[i].addEventListener(
+                    'click',
+                    function(e) {
+                      copyToClipboard(content);
+                    },
+                    false
+                  );
+                }
+                
+                
+                var content2 = document.getElementById('hidden-code').value;
+                var codeCopyableActions = document.querySelectorAll(
+                  '.js-copy-button-2'
+                );
+                
+                for (var i = 0; i < codeCopyableActions.length; i  ++) {
+                  codeCopyableActions[i].addEventListener(
+                    'click',
+                    function(e) {
+                      copyToClipboard(content2);
+                    },
+                    false
+                  );
+                }
+            </script>
         </div>
             <?}
                     } else {
